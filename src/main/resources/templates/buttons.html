@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>按鈕頁面</title>
+    <style>
+        .button-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            gap: 20px;
+        }
+        
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+        }
+        
+        button:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <div class="button-container">
+        <button onclick="handleButton1Click()">按鈕 1</button>
+        <button onclick="handleButton2Click()">按鈕 2</button>
+        <button onclick="callApi('/api/tickets/reset')">重設票券</button>
+    </div>
+
+    <script>
+        function handleButton1Click() {
+            console.log('按鈕 1 被點擊了！');
+        }
+        
+        function handleButton2Click() {
+            console.log('按鈕 2 被點擊了！');
+        }
+
+        async function callApi(apiUrl) {
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST'
+                });
+                const result = await response.text();
+                alert(result);
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+    </script>
+</body>
+</html> 
