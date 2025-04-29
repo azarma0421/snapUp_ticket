@@ -9,6 +9,9 @@ import lombok.Data;
 public class Ticket {
     @Id
     private long id;
+    private String name;
+    private double price;
+    private int stock;
     private String type;
-    private int amount;
+    private int available;
 } 
