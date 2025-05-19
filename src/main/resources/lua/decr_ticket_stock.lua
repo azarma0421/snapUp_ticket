@@ -8,7 +8,7 @@ end
 
 local quantity = tonumber(ARGV[1])
 
-if stock < quantity then
+if tonumber(stock) < quantity then
     return -1
 end
 

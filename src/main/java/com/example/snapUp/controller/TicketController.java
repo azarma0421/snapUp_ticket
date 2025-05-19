@@ -5,6 +5,7 @@ import com.example.snapUp.entity.Ticket;
 import com.example.snapUp.repository.TicketRepository;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Optional;
@@ -86,14 +87,15 @@ public class TicketController {
         // 執行lua
         List<String> keys = List.of(redisKeyStock);
         List<String> argv = List.of(String.valueOf(quantity), String.valueOf(initStock));
-        Long result = exeLua(keys, argv);
+        int result = Math.toIntExact(exeLua(keys, argv));
 
         // 根據回傳結果處理邏輯
-        if (result == null) {
-            return "購票失敗：Redis 無回應";
+        if (result == -2) {
+            return "Lua 發生錯誤";
         } else if (result == -1) {
             return "購票失敗：票券不足";
         } else {
+            ticketRepository.updateById(ticketId, result);
             return "購票成功！剩餘票券：" + result;
         }
     }
@@ -105,11 +107,17 @@ public class TicketController {
 
         script.setScriptText(luaScript);
         script.setResultType(Long.class);
-
-        return redisTemplate.execute(
-                script,
-                keys,
-                ARGV.toArray()
-        );
+        Long res = -2L;
+        try {
+            res = redisTemplate.execute(
+                    script,
+                    keys,
+                    ARGV.toArray());
+        } catch (Exception e) {
+            Throwable cause = e.getCause();
+            System.out.println("Lua 發生錯誤: " + cause.getMessage());
+            cause.printStackTrace();
+        }
+        return res;
     }
 }
