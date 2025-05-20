@@ -5,7 +5,6 @@ import com.example.snapUp.entity.Ticket;
 import com.example.snapUp.repository.TicketRepository;
 
 import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Optional;
