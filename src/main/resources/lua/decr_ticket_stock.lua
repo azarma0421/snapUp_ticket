@@ -2,7 +2,7 @@ local stock = redis.call('GET', KEYS[1])
 
 --如果redis 沒有初始化
 if not stock then
-    stock = tonumber(ARGV[2])
+    stock = ARGV[2]
     redis.call('SET', KEYS[1], stock)
 end
 

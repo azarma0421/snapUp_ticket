@@ -22,20 +22,14 @@ public class TicketController {
     @Autowired
     private TicketRepository ticketRepository;
 
+    @Autowired
     private TicketService ticketService;
 
     @PostMapping("/reset")
     @Transactional
     public String resetTickets() {
         try {
-            logger.info("Attempting to reset tickets");
-            Optional<Ticket> optionalTicket = ticketRepository.findById(1L);
-
-            Ticket ticket = optionalTicket.get();
-            ticket.setType("A");
-            ticket.setStock(20);
-            ticketRepository.save(ticket);
-            logger.info("Tickets reset successfully");
+            ticketService.resetTickets();
             return "票券已重設！";
         } catch (Exception e) {
             logger.error("Error resetting tickets", e);
@@ -68,12 +62,13 @@ public class TicketController {
         int quantity = request.getQuantity() != null ? request.getQuantity() : 1;
         int result = ticketService.purchaseTicket(ticketId, quantity);
 
-        if (result == -2) {
+        if (result == -3) {
+            return "系統繁忙中";
+        } else if (result == -2) {
             return "Lua 發生錯誤";
         } else if (result == -1) {
             return "購票失敗：票券不足";
         } else {
-            ticketRepository.updateById(ticketId, result);
             return "購票成功！剩餘票券：" + result;
         }
     }
