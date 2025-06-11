@@ -3,8 +3,6 @@ package com.example.snapUp.service;
 import com.example.snapUp.controller.TicketController;
 import com.example.snapUp.entity.Ticket;
 import com.example.snapUp.repository.TicketRepository;
-import org.redisson.api.RLock;
-import org.redisson.api.RedissonClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,16 +15,17 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.TimeUnit;
+import java.util.UUID;
 
 @Service
 public class TicketService {
     private static final Logger logger = LoggerFactory.getLogger(TicketController.class);
 
-    private final RedissonClient redissonClient;
-
     @Autowired
     private TicketRepository ticketRepository;
+
+    @Autowired
+    private LockService lockService;
 
     // 鎖定key
     private final String lockKey = "lock:ticket:";
@@ -34,14 +33,10 @@ public class TicketService {
     // 快取key
     private final String redisKey = "ticket_stock:";
 
-    private static String luaPath = "lua/decr_ticket_stock.lua";
+    private static String decrTicketLuaPath = "lua/decr_ticket_stock.lua";
 
     @Autowired
     private RedisTemplate redisTemplate;
-
-    public TicketService(RedissonClient redissonClient) {
-        this.redissonClient = redissonClient;
-    }
 
     public void resetTickets() {
         logger.info("Reset tickets...");
@@ -57,13 +52,14 @@ public class TicketService {
         logger.info("Tickets reset successfully");
     }
 
-    public int purchaseTicket(Long ticketId, int quantity) {
+    public int purchaseTicket(Long ticketId, int quantity) throws IOException {
 
         String redisKeyStock = redisKey + ticketId;
 
-        RLock lock = redissonClient.getLock(lockKey + ticketId);
+        String lockValue = UUID.randomUUID().toString();
+
         try {
-            boolean isLocked = lock.tryLock(3, 5, TimeUnit.SECONDS);
+            boolean isLocked = lockService.lock(lockKey + ticketId,lockValue,5000);
             if (isLocked) {
                 // 初始化 Redis
                 int initStock = 0;
@@ -88,16 +84,16 @@ public class TicketService {
             } else {
                 return -3;
             }
-        } catch (InterruptedException | IOException e) {
+        } catch (IOException e) {
             throw new RuntimeException(e);
         } finally {
-            lock.unlock();
+            lockService.unlock(lockKey + ticketId,lockValue);
         }
     }
 
     private int exeLua(List<String> keys, List<String> ARGV) throws IOException {
         DefaultRedisScript<Long> script = new DefaultRedisScript<>();
-        ClassPathResource luaFile = new ClassPathResource(luaPath);
+        ClassPathResource luaFile = new ClassPathResource(decrTicketLuaPath);
         String luaScript = new String(luaFile.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
 
         script.setScriptText(luaScript);
