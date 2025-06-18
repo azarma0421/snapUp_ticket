@@ -1,7 +1,8 @@
 package com.example.snapUp.service;
 
-import com.example.snapUp.controller.TicketController;
+import com.example.snapUp.entity.TicketOrder;
 import com.example.snapUp.entity.Ticket;
+import com.example.snapUp.repository.TicketOrderRepository;
 import com.example.snapUp.repository.TicketRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,13 +20,16 @@ import java.util.UUID;
 
 @Service
 public class TicketService {
-    private static final Logger logger = LoggerFactory.getLogger(TicketController.class);
+    private static final Logger logger = LoggerFactory.getLogger(TicketService.class);
 
     @Autowired
     private TicketRepository ticketRepository;
 
     @Autowired
     private LockService lockService;
+
+    @Autowired
+    private TicketOrderRepository orderRepository;
 
     // 鎖定key
     private final String lockKey = "lock:ticket:";
@@ -38,28 +42,29 @@ public class TicketService {
     @Autowired
     private RedisTemplate redisTemplate;
 
-    public void resetTickets() {
+    public void resetTickets(String ticketId) {
         logger.info("Reset tickets...");
-        Optional<Ticket> optionalTicket = ticketRepository.findById(1L);
+        Optional<Ticket> optionalTicket = ticketRepository.findById(Long.valueOf(ticketId));
         int resetStock = 20;
+        orderRepository.deleteAll();
 
         Ticket ticket = optionalTicket.get();
         ticket.setType("A");
         ticket.setStock(resetStock);
         ticketRepository.save(ticket);
-        redisTemplate.opsForValue().set(redisKey + "1", String.valueOf(resetStock));
+        redisTemplate.opsForValue().set(redisKey + ticketId, String.valueOf(resetStock));
 
         logger.info("Tickets reset successfully");
     }
 
-    public int purchaseTicket(Long ticketId, int quantity) throws IOException {
+    public int purchaseTicket(Long ticketId, String ticketType, String customerId, int quantity) throws IOException {
 
         String redisKeyStock = redisKey + ticketId;
 
         String lockValue = UUID.randomUUID().toString();
 
         try {
-            boolean isLocked = lockService.lock(lockKey + ticketId,lockValue,5000);
+            boolean isLocked = lockService.lock(lockKey + ticketId, lockValue, 5000);
             if (isLocked) {
                 // 初始化 Redis
                 int initStock = 0;
@@ -79,6 +84,8 @@ public class TicketService {
 
                 if (result >= 0) {
                     ticketRepository.updateById(ticketId, result);
+                    TicketOrder order = new TicketOrder(lockValue, ticketType, customerId, "0");
+                    orderRepository.save(order);
                 }
                 return result;
             } else {
@@ -87,7 +94,7 @@ public class TicketService {
         } catch (IOException e) {
             throw new RuntimeException(e);
         } finally {
-            lockService.unlock(lockKey + ticketId,lockValue);
+            lockService.unlock(lockKey + ticketId, lockValue);
         }
     }
 

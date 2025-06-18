@@ -25,11 +25,12 @@ public class TicketController {
     @Autowired
     private TicketService ticketService;
 
+    // TODO ticketId 要來自前端
     @PostMapping("/reset")
     @Transactional
-    public String resetTickets() {
+    public String resetTickets(@RequestParam(defaultValue = "1") String ticketId) {
         try {
-            ticketService.resetTickets();
+            ticketService.resetTickets(ticketId);
             return "票券已重設！";
         } catch (Exception e) {
             logger.error("Error resetting tickets", e);
@@ -57,19 +58,10 @@ public class TicketController {
 
     @PostMapping("/purchase")
     @Transactional
-    public String purchaseTicket(@RequestBody PurchaseRequest request) throws IOException {
+    public int purchaseTicket(@RequestBody PurchaseRequest request) throws IOException {
         Long ticketId = request.getTicketId();
         int quantity = request.getQuantity() != null ? request.getQuantity() : 1;
-        int result = ticketService.purchaseTicket(ticketId, quantity);
-
-        if (result == -3) {
-            return "系統繁忙中";
-        } else if (result == -2) {
-            return "Lua 發生錯誤";
-        } else if (result == -1) {
-            return "購票失敗：票券不足";
-        } else {
-            return "購票成功！剩餘票券：" + result;
-        }
+        // TODO ticketType、customerId 要來自前端，先寫死
+        return ticketService.purchaseTicket(ticketId, "A", "TEST", quantity);
     }
 }

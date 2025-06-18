@@ -1,18 +1,12 @@
 package com.example.snapUp;
 
-import com.example.snapUp.repository.OrderRepository;
-import com.example.snapUp.repository.TicketRepository;
+import com.example.snapUp.controller.TicketController;
+import com.example.snapUp.dto.PurchaseRequest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.core.io.ClassPathResource;
-import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.data.redis.core.script.DefaultRedisScript;
 
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -21,41 +15,34 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class TicketConcurrencyTest {
 
     @Autowired
-    private StringRedisTemplate redisTemplate;
-
-    @Autowired
-    private OrderRepository orderRepository;
-
-    private static final String luaPath = "lua/decr_ticket_stock.lua";
-    private static final String stockKey = "ticket_stock:1";
+    private TicketController ticketController;
 
     @Test
     public void testHighConcurrencyBuying() throws InterruptedException {
         System.out.println(">>> TicketConcurrencyTest 正在執行");
         final int threadCount = 50;
-        final int initTicket = 20;
         AtomicInteger successCount = new AtomicInteger();
-        orderRepository.refreshOrders();
-        CountDownLatch latch = new CountDownLatch(threadCount);
 
-        redisTemplate.opsForValue().set(stockKey, String.valueOf(initTicket));
+        ticketController.resetTickets("1");
+        PurchaseRequest purchaseRequest = new PurchaseRequest(1L, 1);
+        CountDownLatch latch = new CountDownLatch(threadCount);
 
         for (int i = 0; i < threadCount; i++) {
             int userId = i + 1;
             new Thread(() -> {
                 try {
-                    List<String> keys = List.of(stockKey);
-                    List<String> argv = List.of("1", String.valueOf(initTicket));
-                    Long res = exeLua(keys, argv);
+                    int res = ticketController.purchaseTicket(purchaseRequest);
 
-                    if (res == -2) {
+                    if (res == -3) {
+                        System.out.println("用戶 " + userId + " 購票失敗：超時");
+                    } else if (res == -2) {
                         System.out.println("Lua 發生錯誤");
                     } else if (res == -1) {
                         System.out.println("用戶 " + userId + " 購票失敗：票券不足");
                     } else {
-                        // TODO 持久化 ticket、order
                         successCount.getAndIncrement();
-                        System.out.println("用戶 " + userId + " 購票成功，票券剩餘: " + res);
+                        int tickets = Integer.parseInt(ticketController.showRemain());
+                        System.out.println("用戶 " + userId + " 購票成功，票券剩餘: " + tickets);
                     }
                 } catch (Exception e) {
                     System.out.println("Lua 發生錯誤: " + e.getMessage());
@@ -67,27 +54,5 @@ public class TicketConcurrencyTest {
         latch.await();
         System.out.println("購買成功人數: " + successCount);
         System.out.println("模擬結束");
-    }
-
-    private Long exeLua(List<String> keys, List<String> ARGV) throws IOException {
-        DefaultRedisScript<Long> script = new DefaultRedisScript<>();
-        ClassPathResource luaFile = new ClassPathResource(luaPath);
-        String luaScript = new String(luaFile.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
-
-        script.setScriptText(luaScript);
-        script.setResultType(Long.class);
-        Long res = -2L;
-        try {
-            res = redisTemplate.execute(
-                    script,
-                    keys,
-                    ARGV.toArray()
-            );
-        } catch (Exception e) {
-            Throwable cause = e.getCause();
-            System.out.println("Lua 發生錯誤: " + cause.getMessage());
-            cause.printStackTrace();
-        }
-        return res;
     }
 }
