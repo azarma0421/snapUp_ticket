@@ -62,9 +62,25 @@ public class TicketService {
         String redisKeyStock = redisKey + ticketId;
 
         String lockValue = UUID.randomUUID().toString();
+        boolean isLocked = false;
+        int maxRetries = 5;
+        long retryDelayMillis = 100;
 
         try {
-            boolean isLocked = lockService.lock(lockKey + ticketId, lockValue, 5000);
+            // 重試取鎖
+            for (int retryTimes = 1; retryTimes <= maxRetries; retryTimes++) {
+                isLocked = lockService.lock(lockKey + ticketId, lockValue, 5000);
+                if (isLocked) {
+                    break;
+                }
+                if (retryTimes < maxRetries - 1) {
+                    try {
+                        Thread.sleep(retryDelayMillis);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                    }
+                }
+            }
             if (isLocked) {
                 // 初始化 Redis
                 int initStock = 0;
@@ -89,12 +105,15 @@ public class TicketService {
                 }
                 return result;
             } else {
+                logger.warn("購票失敗, Ticket Id: {}", ticketId);
                 return -3;
             }
         } catch (IOException e) {
             throw new RuntimeException(e);
         } finally {
-            lockService.unlock(lockKey + ticketId, lockValue);
+            if (isLocked) {
+                lockService.unlock(lockKey + ticketId, lockValue);
+            }
         }
     }
 

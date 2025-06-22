@@ -41,6 +41,7 @@ public class TicketConcurrencyTest {
                         System.out.println("用戶 " + userId + " 購票失敗：票券不足");
                     } else {
                         successCount.getAndIncrement();
+                        // 這裡沒有鎖，顯示的剩餘票數可能會不對，但純粹的Query 沒必要上鎖
                         int tickets = Integer.parseInt(ticketController.showRemain());
                         System.out.println("用戶 " + userId + " 購票成功，票券剩餘: " + tickets);
                     }
