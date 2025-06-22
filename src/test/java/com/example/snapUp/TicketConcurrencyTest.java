@@ -24,13 +24,15 @@ public class TicketConcurrencyTest {
         AtomicInteger successCount = new AtomicInteger();
 
         ticketController.resetTickets("1");
-        PurchaseRequest purchaseRequest = new PurchaseRequest(1L, 1);
         CountDownLatch latch = new CountDownLatch(threadCount);
 
         for (int i = 0; i < threadCount; i++) {
             int userId = i + 1;
             new Thread(() -> {
                 try {
+                    PurchaseRequest purchaseRequest = new PurchaseRequest(1L, null, null, 1);
+                    purchaseRequest.setCustomer_id(String.valueOf(userId));
+                    purchaseRequest.setTicket_type("A");
                     int res = ticketController.purchaseTicket(purchaseRequest);
 
                     if (res == -3) {

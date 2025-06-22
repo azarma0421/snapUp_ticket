@@ -9,5 +9,7 @@ import lombok.NoArgsConstructor;
 @Data
 public class PurchaseRequest {
     private Long ticketId;
+    private String ticket_type;
+    private String customer_id;
     private Integer quantity;
 } 

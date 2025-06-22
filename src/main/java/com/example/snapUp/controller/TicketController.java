@@ -62,6 +62,6 @@ public class TicketController {
         Long ticketId = request.getTicketId();
         int quantity = request.getQuantity() != null ? request.getQuantity() : 1;
         // TODO ticketType、customerId 要來自前端，先寫死
-        return ticketService.purchaseTicket(ticketId, "A", "TEST", quantity);
+        return ticketService.purchaseTicket(ticketId, request.getTicket_type(), request.getCustomer_id(), quantity);
     }
 }
