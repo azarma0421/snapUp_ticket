@@ -10,11 +10,11 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class TicketOrder {
+public class Orders {
 
     //    票券ID
     @Id
-    private String ticketId;
+    private String orderId;
 
     //    票券類型
     private String ticketType;

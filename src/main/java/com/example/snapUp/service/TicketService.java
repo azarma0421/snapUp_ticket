@@ -1,8 +1,8 @@
 package com.example.snapUp.service;
 
-import com.example.snapUp.entity.TicketOrder;
+import com.example.snapUp.entity.Orders;
 import com.example.snapUp.entity.Ticket;
-import com.example.snapUp.repository.TicketOrderRepository;
+import com.example.snapUp.repository.OrdersRepository;
 import com.example.snapUp.repository.TicketRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,7 +29,7 @@ public class TicketService {
     private LockService lockService;
 
     @Autowired
-    private TicketOrderRepository orderRepository;
+    private OrdersRepository ordersRepository;
 
     @Autowired
     private OrderService orderService;
@@ -50,7 +50,7 @@ public class TicketService {
         logger.info("Reset tickets...");
         Optional<Ticket> optionalTicket = ticketRepository.findById(ticketType);
         int resetStock = 20;
-        orderRepository.deleteAll();
+        ordersRepository.deleteAll();
 
         Ticket ticket = optionalTicket.get();
         ticket.setStock(resetStock);
@@ -103,8 +103,8 @@ public class TicketService {
 
                 if (result >= 0) {
                     ticketRepository.updateByType(ticketType, result);
-                    TicketOrder order = new TicketOrder(lockValue, ticketType, customerId, "0");
-                    orderRepository.save(order);
+                    Orders order = new Orders(lockValue, ticketType, customerId, "0");
+                    ordersRepository.save(order);
                     orderService.setOrderDelay(lockValue);
                 }
                 return result;

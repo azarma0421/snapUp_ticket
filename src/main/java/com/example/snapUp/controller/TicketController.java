@@ -72,6 +72,6 @@ public class TicketController {
     @Transactional
     public void paying(@RequestBody PurchaseRequest request) throws IOException {
         // TODO 目前預設每人只有一張票
-        orderService.payByTicketId(request.getCustomerId());
+        orderService.payByCustomerId(request.getCustomerId());
     }
 }
