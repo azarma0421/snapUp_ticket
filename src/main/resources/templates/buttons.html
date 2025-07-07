@@ -46,7 +46,9 @@
     <div class="button-container">
         <button onclick="callApi('/api/tickets/reset')">重設票券</button>
         <button onclick="callApi('/api/tickets/showRemain')">剩餘票券</button>
-        <button onclick="callApi('/api/tickets/purchase',{ticketId:1})">購買票券</button>
+        <!-- TODO 購票資訊先寫死 -->
+        <button onclick="callApi('/api/tickets/purchase',{ticketType:'A',customerId:'1'})">購買票券</button>
+        <button onclick="callApi('/api/tickets/pay',{customerId:'1'})">付款</button>
     </div>
 
     <script>
@@ -55,7 +57,7 @@
                 const baseUrl = 'http://localhost:8080';
                 const fullUrl = baseUrl + apiUrl;
                 console.log('Calling API:', fullUrl);
-                
+
                 const options = {
                     method: 'POST',
                     headers: {
@@ -67,17 +69,25 @@
                 // 如果是購票請求
                 if (apiUrl === '/api/tickets/purchase') {
                     options.body = JSON.stringify({
-                        ticketId: param.ticketId,
+                        ticketType: param.ticketType,
+                        customerId: param.customerId,
                         quantity: 1
+                    });
+                }
+                // 如果是付款請求
+                else if (apiUrl === '/api/tickets/pay') {
+                    options.body = JSON.stringify({
+                        ticketId: param.ticketId,
+                        customerId: param.customerId
                     });
                 }
 
                 const response = await fetch(fullUrl, options);
-                
+
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
-                
+
                 const result = await response.text();
                 console.log('API Response:', result);
                 showResult(result);
