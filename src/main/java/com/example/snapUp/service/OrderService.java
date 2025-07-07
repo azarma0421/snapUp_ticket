@@ -6,6 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.redisson.api.RedissonClient;
 
 import java.util.Optional;
 
@@ -16,19 +17,28 @@ public class OrderService {
     @Autowired
     private TicketOrderRepository orderRepository;
 
-    public int payByCustomerId(String customerId) {
-        Optional<TicketOrder> order = orderRepository.findPayingOrderByCustomer_id(customerId);
-        if (order.isPresent()) {
-            TicketOrder newOrder = order.get();
+    @Autowired
+    private RedissonClient redissonClient;
+
+    public int payByTicketId(String customerId) {
+        Optional<TicketOrder> order = orderRepository.getTicketIdByCustomerId(customerId);
+        if (!order.isPresent()) {
+            return 0;
+        }
+        String ticketId = order.get().getTicketId();
+        Optional<TicketOrder> o = orderRepository.findUnpaidOrderByTicketId(ticketId);
+        if (o.isPresent()) {
+            TicketOrder newOrder = o.get();
             newOrder.setStatus("1");
             orderRepository.save(newOrder);
+            redissonClient.getScoredSortedSet("order:delay:queue").remove(ticketId);
             return 1;
         }
         return 0;
     }
 
-    public int cancelByCustomerId(String customerId) {
-        Optional<TicketOrder> order = orderRepository.findPayingOrderByCustomer_id(customerId);
+    public int cancelByTicketId(String ticketId) {
+        Optional<TicketOrder> order = orderRepository.findUnpaidOrderByTicketId(ticketId);
         if (order.isPresent()) {
             TicketOrder newOrder = order.get();
             newOrder.setStatus("2");
@@ -39,12 +49,26 @@ public class OrderService {
     }
 
     // 0 paying, 1 payed, 2 cancel
-    public void changeOrderStatusByCustomerId(String customerId, String status) {
-        Optional<TicketOrder> order = orderRepository.findByCustomer_id(customerId);
+    public void changeOrderStatusByTicketId(String ticketId, String status) {
+        Optional<TicketOrder> order = orderRepository.findByTicketId(ticketId);
         if (order.isPresent()) {
             TicketOrder newOrder = order.get();
             newOrder.setStatus(status);
             orderRepository.save(newOrder);
+        }
+    }
+
+    public void setOrderDelay(String ticketId) {
+        long expireAt = System.currentTimeMillis() + 15 * 1000;
+        redissonClient.getScoredSortedSet("order:delay:queue").add(expireAt, ticketId);
+    }
+
+    public void cancelOrderById(String ticketId) {
+        Optional<TicketOrder> order = orderRepository.findById(ticketId);
+        if (order.isPresent() && "0".equals(order.get().getStatus())) {
+            TicketOrder o = order.get();
+            o.setStatus("2");
+            orderRepository.save(o);
         }
     }
 }

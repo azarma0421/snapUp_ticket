@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.util.Optional;
 
 import com.example.snapUp.service.TicketService;
+import com.example.snapUp.service.OrderService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,7 +26,10 @@ public class TicketController {
     @Autowired
     private TicketService ticketService;
 
-    // TODO ticketId 要來自前端
+    @Autowired
+    private OrderService orderService;
+
+    // TODO ticketType 要來自前端
     @PostMapping("/reset")
     @Transactional
     public String resetTickets(@RequestParam(defaultValue = "A") String  ticketType) {
@@ -63,5 +67,11 @@ public class TicketController {
         // TODO ticketType、customerId 要來自前端，先寫死
         return ticketService.purchaseTicket(request.getTicketType(), request.getCustomerId(), quantity);
     }
+
+    @PostMapping("/pay")
+    @Transactional
+    public void paying(@RequestBody PurchaseRequest request) throws IOException {
+        // TODO 目前預設每人只有一張票
+        orderService.payByTicketId(request.getCustomerId());
     }
 }
