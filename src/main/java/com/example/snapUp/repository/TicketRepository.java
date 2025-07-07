@@ -7,10 +7,10 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.transaction.annotation.Transactional;
 
-public interface TicketRepository extends JpaRepository<Ticket, Long> {
+public interface TicketRepository extends JpaRepository<Ticket, String> {
 
     @Modifying
     @Transactional
-    @Query("update Ticket t set t.stock = :stock where t.id = :id")
-    void updateById(@Param("id") long id, @Param("stock") int stock);
+    @Query("update Ticket t set t.stock = :stock where t.type = :type")
+    void updateByType(@Param("type") String type, @Param("stock") int stock);
 }

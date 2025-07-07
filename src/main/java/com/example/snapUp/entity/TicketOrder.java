@@ -14,13 +14,13 @@ public class TicketOrder {
 
     //    票券ID
     @Id
-    private String ticket_id;
+    private String ticketId;
 
     //    票券類型
-    private String ticket_type;
+    private String ticketType;
 
     //    買家ID
-    private String customer_id;
+    private String customerId;
 
     //    付款狀態
     private String status;

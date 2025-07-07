@@ -28,9 +28,9 @@ public class TicketController {
     // TODO ticketId 要來自前端
     @PostMapping("/reset")
     @Transactional
-    public String resetTickets(@RequestParam(defaultValue = "1") String ticketId) {
+    public String resetTickets(@RequestParam(defaultValue = "A") String  ticketType) {
         try {
-            ticketService.resetTickets(ticketId);
+            ticketService.resetTickets(ticketType);
             return "票券已重設！";
         } catch (Exception e) {
             logger.error("Error resetting tickets", e);
@@ -42,7 +42,7 @@ public class TicketController {
     public String showRemain() {
         try {
             logger.info("Attempting to show remaining tickets");
-            Optional<Ticket> optionalTicket = ticketRepository.findById(1L);
+            Optional<Ticket> optionalTicket = ticketRepository.findById("A");
             if (optionalTicket.isPresent()) {
                 Ticket ticket = optionalTicket.get();
                 logger.info("Found ticket with stock: {}", ticket.getStock());
@@ -59,9 +59,9 @@ public class TicketController {
     @PostMapping("/purchase")
     @Transactional
     public int purchaseTicket(@RequestBody PurchaseRequest request) throws IOException {
-        Long ticketId = request.getTicketId();
         int quantity = request.getQuantity() != null ? request.getQuantity() : 1;
         // TODO ticketType、customerId 要來自前端，先寫死
-        return ticketService.purchaseTicket(ticketId, request.getTicket_type(), request.getCustomer_id(), quantity);
+        return ticketService.purchaseTicket(request.getTicketType(), request.getCustomerId(), quantity);
+    }
     }
 }

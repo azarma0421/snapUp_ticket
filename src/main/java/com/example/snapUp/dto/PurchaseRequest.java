@@ -8,8 +8,8 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @Data
 public class PurchaseRequest {
-    private Long ticketId;
-    private String ticket_type;
-    private String customer_id;
+    private String ticketId;
+    private String ticketType;
+    private String customerId;
     private Integer quantity;
 } 

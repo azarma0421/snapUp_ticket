@@ -31,6 +31,9 @@ public class TicketService {
     @Autowired
     private TicketOrderRepository orderRepository;
 
+    @Autowired
+    private OrderService orderService;
+
     // 鎖定key
     private final String lockKey = "lock:ticket:";
 
@@ -42,24 +45,24 @@ public class TicketService {
     @Autowired
     private RedisTemplate redisTemplate;
 
-    public void resetTickets(String ticketId) {
+    // 重設所有資料
+    public void resetTickets(String ticketType) {
         logger.info("Reset tickets...");
-        Optional<Ticket> optionalTicket = ticketRepository.findById(Long.valueOf(ticketId));
+        Optional<Ticket> optionalTicket = ticketRepository.findById(ticketType);
         int resetStock = 20;
         orderRepository.deleteAll();
 
         Ticket ticket = optionalTicket.get();
-        ticket.setType("A");
         ticket.setStock(resetStock);
         ticketRepository.save(ticket);
-        redisTemplate.opsForValue().set(redisKey + ticketId, String.valueOf(resetStock));
+        redisTemplate.opsForValue().set(redisKey + ticketType, String.valueOf(resetStock));
 
         logger.info("Tickets reset successfully");
     }
 
-    public int purchaseTicket(Long ticketId, String ticketType, String customerId, int quantity) throws IOException {
+    public int purchaseTicket(String ticketType, String customerId, int quantity) throws IOException {
 
-        String redisKeyStock = redisKey + ticketId;
+        String redisKeyStock = redisKey + ticketType;
 
         String lockValue = UUID.randomUUID().toString();
         boolean isLocked = false;
@@ -69,7 +72,7 @@ public class TicketService {
         try {
             // 重試取鎖
             for (int retryTimes = 1; retryTimes <= maxRetries; retryTimes++) {
-                isLocked = lockService.lock(lockKey + ticketId, lockValue, 5000);
+                isLocked = lockService.lock(lockKey + ticketType, lockValue, 5000);
                 if (isLocked) {
                     break;
                 }
@@ -85,7 +88,7 @@ public class TicketService {
                 // 初始化 Redis
                 int initStock = 0;
                 if (!redisTemplate.hasKey(redisKeyStock)) {
-                    Optional<Ticket> optionalTicket = ticketRepository.findById(ticketId);
+                    Optional<Ticket> optionalTicket = ticketRepository.findById(ticketType);
                     if (optionalTicket.isEmpty()) {
                         return -2;
                     }
@@ -99,20 +102,21 @@ public class TicketService {
                 int result = this.exeLua(keys, argv);
 
                 if (result >= 0) {
-                    ticketRepository.updateById(ticketId, result);
+                    ticketRepository.updateByType(ticketType, result);
                     TicketOrder order = new TicketOrder(lockValue, ticketType, customerId, "0");
                     orderRepository.save(order);
+                    orderService.setOrderDelay(lockValue);
                 }
                 return result;
             } else {
-                logger.warn("購票失敗, Ticket Id: {}", ticketId);
+                logger.warn("購票失敗, Ticket Type: {}", ticketType);
                 return -3;
             }
         } catch (IOException e) {
             throw new RuntimeException(e);
         } finally {
             if (isLocked) {
-                lockService.unlock(lockKey + ticketId, lockValue);
+                lockService.unlock(lockKey + ticketType, lockValue);
             }
         }
     }

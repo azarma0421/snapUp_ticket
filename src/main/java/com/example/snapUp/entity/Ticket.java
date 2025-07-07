@@ -8,10 +8,9 @@ import lombok.Data;
 @Data
 public class Ticket {
     @Id
-    private long id;
+    private String type;
     private String name;
     private double price;
     private int stock;
-    private String type;
     private int available;
 } 
