@@ -7,13 +7,11 @@ import com.example.snapUp.repository.TicketRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.io.ClassPathResource;
+import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -33,6 +31,9 @@ public class TicketService {
 
     @Autowired
     private OrderService orderService;
+
+    @Autowired
+    private LuaScriptService luaScriptService;
 
     // 鎖定key
     private final String lockKey = "lock:ticket:";
@@ -70,20 +71,7 @@ public class TicketService {
         long retryDelayMillis = 100;
 
         try {
-            // 重試取鎖
-            for (int retryTimes = 1; retryTimes <= maxRetries; retryTimes++) {
-                isLocked = lockService.lock(lockKey + ticketType, lockValue, 5000);
-                if (isLocked) {
-                    break;
-                }
-                if (retryTimes < maxRetries - 1) {
-                    try {
-                        Thread.sleep(retryDelayMillis);
-                    } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
-                    }
-                }
-            }
+            isLocked = lockService.Lock(lockKey + ticketType, lockValue, maxRetries, retryDelayMillis);
             if (isLocked) {
                 // 初始化 Redis
                 int initStock = 0;
@@ -99,7 +87,7 @@ public class TicketService {
                 // 執行lua
                 List<String> keys = List.of(redisKeyStock);
                 List<String> argv = List.of(String.valueOf(quantity), String.valueOf(initStock));
-                int result = this.exeLua(keys, argv);
+                int result = luaScriptService.exeLua(keys, argv, decrTicketLuaPath);
 
                 if (result >= 0) {
                     ticketRepository.updateByType(ticketType, result);
@@ -119,26 +107,5 @@ public class TicketService {
                 lockService.unlock(lockKey + ticketType, lockValue);
             }
         }
-    }
-
-    private int exeLua(List<String> keys, List<String> ARGV) throws IOException {
-        DefaultRedisScript<Long> script = new DefaultRedisScript<>();
-        ClassPathResource luaFile = new ClassPathResource(decrTicketLuaPath);
-        String luaScript = new String(luaFile.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
-
-        script.setScriptText(luaScript);
-        script.setResultType(Long.class);
-        int res = -2;
-        try {
-            res = Math.toIntExact((Long) redisTemplate.execute(
-                    script,
-                    keys,
-                    ARGV.toArray()));
-        } catch (Exception e) {
-            Throwable cause = e.getCause();
-            System.out.println("Lua 發生錯誤: " + cause.getMessage());
-            cause.printStackTrace();
-        }
-        return res;
     }
 }

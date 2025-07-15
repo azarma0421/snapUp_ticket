@@ -13,7 +13,11 @@ import org.redisson.api.RedissonClient;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.Async;
 
+import java.io.IOException;
+import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 @Service
 @EnableAsync
@@ -28,6 +32,18 @@ public class OrderService {
 
     @Autowired
     private RedissonClient redissonClient;
+
+    @Autowired
+    private LockService lockService;
+
+    @Autowired
+    private LuaScriptService luaScriptService;
+
+    private final String cancelKey = "cancel_order:";
+
+    private final String redisKey = "ticket_stock:";
+
+    private static String incrTicketLuaPath = "lua/incr_ticket_stock.lua";
 
     public int payByCustomerId(String customerId) {
         Optional<Orders> order = ordersRepository.getTicketIdByCustomerId(customerId);
@@ -74,14 +90,47 @@ public class OrderService {
     }
 
     @Async
-    public void cancelOrderById(String orderId) {
+    public CompletableFuture<Boolean> cancelOrderById(String orderId) {
+        String lockValue = UUID.randomUUID().toString();
+        boolean isLocked = false;
+
         Optional<Orders> order = ordersRepository.findById(orderId);
         if (order.isPresent() && "0".equals(order.get().getStatus())) {
             Orders o = order.get();
             o.setStatus("2");
-            Ticket ticket = ticketRepository.findById(o.getTicketType()).get();
-            ticketRepository.updateByType(o.getTicketType(), ticket.getStock() + 1);
-            ordersRepository.save(o);
+
+            try {
+                isLocked = lockService.Lock(cancelKey + o.getTicketType(), lockValue, 5, 100);
+
+                if (isLocked) {
+
+                    // 1. update DB
+                    Ticket ticket = ticketRepository.findById(o.getTicketType()).get();
+                    ticketRepository.updateByType(o.getTicketType(), ticket.getStock() + 1);
+                    ordersRepository.save(o);
+
+
+                } else {
+                    logger.info("orderId: {} get lock fail.", orderId);
+                    return CompletableFuture.completedFuture(false);
+                }
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            } catch (Exception e) {
+                logger.error("cancelOrderById error: ", e);
+            } finally {
+                if (isLocked) {
+                    try {
+                        lockService.unlock(cancelKey + o.getTicketType(), lockValue);
+                    } catch (IOException e) {
+                        logger.error("Unlock failed: ", e);
+                    }
+                }
+            }
+        } else {
+            logger.error("orderId not found: ", orderId);
+            return CompletableFuture.completedFuture(false);
         }
+        return CompletableFuture.completedFuture(true);
     }
 }

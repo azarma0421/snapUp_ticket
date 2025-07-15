@@ -27,7 +27,29 @@ public class LockService {
         this.redisTemplate = redisTemplate;
     }
 
-    public boolean lock(String lockKey, String lockValue, long exp) throws IOException {
+    /**
+     * redis Lock 
+     */
+    public boolean Lock(String lockKey, String lockValue, int maxRetries, long retryDelayMillis) throws IOException {
+        boolean isLocked = false;
+        // 重試取鎖
+        for (int retryTimes = 1; retryTimes <= maxRetries; retryTimes++) {
+            isLocked = locking(lockKey, lockValue, 5000);
+            if (isLocked) {
+                break;
+            }
+            if (retryTimes < maxRetries - 1) {
+                try {
+                    Thread.sleep(retryDelayMillis);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }
+        }
+        return isLocked;
+    }
+
+    private boolean locking(String lockKey, String lockValue, long exp) throws IOException {
         logger.info("lockKey: {}, lockValue: {}, exp: {}", lockKey, lockValue, exp);
         DefaultRedisScript<String> script = new DefaultRedisScript<>();
         ClassPathResource luaFile = new ClassPathResource(lockLuaPath);
@@ -39,10 +61,9 @@ public class LockService {
                 script,
                 Collections.singletonList(lockKey),
                 lockValue,
-                String.valueOf(exp)
-        );
+                String.valueOf(exp));
 
-        //TODO watckdog
+        // TODO watckdog
 
         return "OK".equals(result);
     }
@@ -57,8 +78,7 @@ public class LockService {
         Long result = (Long) redisTemplate.execute(
                 script,
                 Collections.singletonList(lockKey),
-                lockValue
-        );
+                lockValue);
 
         return result == 1L;
     }
