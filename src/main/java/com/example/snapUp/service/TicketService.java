@@ -56,8 +56,13 @@ public class TicketService {
         Ticket ticket = optionalTicket.get();
         ticket.setStock(resetStock);
         ticketRepository.save(ticket);
-        redisTemplate.opsForValue().set(redisKey + ticketType, String.valueOf(resetStock));
 
+        redisTemplate.execute((RedisCallback<Object>) connection -> {
+            connection.flushAll();
+            return null;
+        });
+        redisTemplate.opsForValue().set(redisKey + ticketType, String.valueOf(resetStock));
+        
         logger.info("Tickets reset successfully");
     }
 
