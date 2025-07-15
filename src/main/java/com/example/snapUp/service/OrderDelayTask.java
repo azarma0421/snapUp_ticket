@@ -1,13 +1,18 @@
 package com.example.snapUp.service;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.redisson.api.RedissonClient;
+import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.redisson.api.RScoredSortedSet;
 import java.util.Collection;
 import org.springframework.stereotype.Component;
+import org.slf4j.Logger;
 
 @Component
 public class OrderDelayTask {
+    private static final Logger logger = LoggerFactory.getLogger(OrderDelayTask.class);
+
     @Autowired
     private RedissonClient redissonClient;
     @Autowired
@@ -20,8 +25,13 @@ public class OrderDelayTask {
         Collection<String> expiredOrderIds = zset.valueRange(0, true, now, true);
 
         for (String orderId : expiredOrderIds) {
-            orderService.cancelOrderById(orderId); 
-            zset.remove(orderId);
+            orderService.cancelOrderById(orderId).thenAccept(result -> {
+                if (result) {
+                    zset.remove(orderId);
+                } else {
+                    logger.error("order cancel fail, orderId: {}", orderId);
+                }
+            });
         }
     }
 }

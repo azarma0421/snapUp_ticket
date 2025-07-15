@@ -109,6 +109,10 @@ public class OrderService {
                     ticketRepository.updateByType(o.getTicketType(), ticket.getStock() + 1);
                     ordersRepository.save(o);
 
+                    // 2. update redis
+                    List<String> keys = List.of(redisKey + o.getTicketType());
+                    List<String> argv = List.of(String.valueOf(1), String.valueOf(ticket.getStock()));
+                    luaScriptService.exeLua(keys, argv, incrTicketLuaPath);
 
                 } else {
                     logger.info("orderId: {} get lock fail.", orderId);
