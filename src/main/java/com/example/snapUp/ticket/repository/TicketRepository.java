@@ -1,6 +1,6 @@
-package com.example.snapUp.repository;
+package com.example.snapUp.ticket.repository;
 
-import com.example.snapUp.entity.Ticket;
+import com.example.snapUp.ticket.entity.Ticket;
 import io.lettuce.core.dynamic.annotation.Param;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;

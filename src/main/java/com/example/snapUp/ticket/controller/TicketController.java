@@ -1,14 +1,14 @@
-package com.example.snapUp.controller;
+package com.example.snapUp.ticket.controller;
 
-import com.example.snapUp.dto.PurchaseRequest;
-import com.example.snapUp.entity.Ticket;
-import com.example.snapUp.repository.TicketRepository;
+import com.example.snapUp.ticket.dto.PurchaseRequest;
+import com.example.snapUp.ticket.entity.Ticket;
+import com.example.snapUp.ticket.repository.TicketRepository;
 
 import java.io.IOException;
 import java.util.Optional;
 
-import com.example.snapUp.service.TicketService;
-import com.example.snapUp.service.OrderService;
+import com.example.snapUp.ticket.services.TicketService;
+import com.example.snapUp.ticket.services.OrderService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.transaction.annotation.Transactional;

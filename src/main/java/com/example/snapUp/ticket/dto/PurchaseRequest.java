@@ -1,4 +1,4 @@
-package com.example.snapUp.dto;
+package com.example.snapUp.ticket.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

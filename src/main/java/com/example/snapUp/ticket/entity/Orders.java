@@ -1,4 +1,4 @@
-package com.example.snapUp.entity;
+package com.example.snapUp.ticket.entity;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;

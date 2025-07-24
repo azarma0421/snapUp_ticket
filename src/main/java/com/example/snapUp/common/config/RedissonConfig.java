@@ -1,4 +1,4 @@
-package com.example.snapUp.config;
+package com.example.snapUp.common.config;
 
 import org.redisson.Redisson;
 import org.redisson.api.RedissonClient;

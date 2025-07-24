@@ -1,6 +1,6 @@
-package com.example.snapUp.repository;
+package com.example.snapUp.ticket.repository;
 
-import com.example.snapUp.entity.Orders;
+import com.example.snapUp.ticket.entity.Orders;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.transaction.annotation.Transactional;

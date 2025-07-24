@@ -1,5 +1,6 @@
-package com.example.snapUp.service;
+package com.example.snapUp.common.services;
 
+import com.example.snapUp.common.exceptions.LockNotAcquireException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,6 +12,8 @@ import org.springframework.stereotype.Service;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
+import java.util.UUID;
+import java.util.concurrent.Callable;
 
 @Service
 public class LockService {
@@ -27,8 +30,27 @@ public class LockService {
         this.redisTemplate = redisTemplate;
     }
 
+    public <T> T executeWithLock(String lockKey, int maxRetries, long retryDelayMillis, Callable<T> action) throws IOException {
+        String lockValue = UUID.randomUUID().toString();
+
+        boolean isLocked = Lock(lockKey, lockValue, maxRetries, retryDelayMillis);
+        if (isLocked) {
+            try {
+                return action.call();
+            } catch (IOException e) {
+                throw e;
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            } finally {
+                unlock(lockKey, lockValue);
+            }
+        } else {
+            throw new LockNotAcquireException("Cant acquire lock, lockKey: " + lockKey);
+        }
+    }
+
     /**
-     * redis Lock 
+     * redis Lock
      */
     public boolean Lock(String lockKey, String lockValue, int maxRetries, long retryDelayMillis) throws IOException {
         boolean isLocked = false;

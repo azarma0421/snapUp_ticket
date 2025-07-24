@@ -1,9 +1,11 @@
-package com.example.snapUp.service;
+package com.example.snapUp.ticket.services;
 
-import com.example.snapUp.entity.Orders;
-import com.example.snapUp.entity.Ticket;
-import com.example.snapUp.repository.OrdersRepository;
-import com.example.snapUp.repository.TicketRepository;
+import com.example.snapUp.common.services.LockService;
+import com.example.snapUp.common.services.LuaScriptService;
+import com.example.snapUp.ticket.entity.Orders;
+import com.example.snapUp.ticket.entity.Ticket;
+import com.example.snapUp.ticket.repository.OrdersRepository;
+import com.example.snapUp.ticket.repository.TicketRepository;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

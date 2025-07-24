@@ -1,4 +1,4 @@
-package com.example.snapUp.service;
+package com.example.snapUp.ticket.services;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.redisson.api.RedissonClient;
