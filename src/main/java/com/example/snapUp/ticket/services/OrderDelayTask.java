@@ -5,6 +5,8 @@ import org.redisson.api.RedissonClient;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.redisson.api.RScoredSortedSet;
+
+import java.io.IOException;
 import java.util.Collection;
 import org.springframework.stereotype.Component;
 import org.slf4j.Logger;
@@ -19,7 +21,7 @@ public class OrderDelayTask {
     private OrderService orderService; // 用來改訂單狀態
 
     @Scheduled(fixedRate = 5000) // 每5秒執行一次
-    public void cancelExpiredOrders() {
+    public void cancelExpiredOrders() throws IOException {
         long now = System.currentTimeMillis();
         RScoredSortedSet<String> zset = redissonClient.getScoredSortedSet("order:delay:queue");
         Collection<String> expiredOrderIds = zset.valueRange(0, true, now, true);

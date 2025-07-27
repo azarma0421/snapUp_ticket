@@ -1,11 +1,13 @@
 package com.example.snapUp.ticket.controller;
 
 import com.example.snapUp.ticket.dto.PurchaseRequest;
+import com.example.snapUp.ticket.dto.TicketPurchaseResult;
 import com.example.snapUp.ticket.entity.Ticket;
 import com.example.snapUp.ticket.repository.TicketRepository;
 
 import java.io.IOException;
 import java.util.Optional;
+import java.util.zip.DataFormatException;
 
 import com.example.snapUp.ticket.services.TicketService;
 import com.example.snapUp.ticket.services.OrderService;
@@ -62,15 +64,14 @@ public class TicketController {
 
     @PostMapping("/purchase")
     @Transactional
-    public int purchaseTicket(@RequestBody PurchaseRequest request) throws IOException {
+    public TicketPurchaseResult purchaseTicket(@RequestBody PurchaseRequest request) throws IOException {
         int quantity = request.getQuantity() != null ? request.getQuantity() : 1;
-        // TODO ticketType、customerId 要來自前端，先寫死
         return ticketService.purchaseTicket(request.getTicketType(), request.getCustomerId(), quantity);
     }
 
     @PostMapping("/pay")
     @Transactional
-    public void paying(@RequestBody PurchaseRequest request) throws IOException {
+    public void paying(@RequestBody PurchaseRequest request) throws DataFormatException {
         // TODO 目前預設每人只有一張票
         orderService.payByCustomerId(request.getCustomerId());
     }

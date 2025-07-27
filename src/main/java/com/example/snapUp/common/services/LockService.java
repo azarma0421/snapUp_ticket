@@ -30,6 +30,16 @@ public class LockService {
         this.redisTemplate = redisTemplate;
     }
 
+    /**
+     * executeWithLock
+     * @param lockKey Lock Key
+     * @param maxRetries Max Retries
+     * @param retryDelayMillis Retry Delay Millis
+     * @param action What do you want after lock
+     * @return
+     * @param <T>
+     * @throws IOException
+     */
     public <T> T executeWithLock(String lockKey, int maxRetries, long retryDelayMillis, Callable<T> action) throws IOException {
         String lockValue = UUID.randomUUID().toString();
 

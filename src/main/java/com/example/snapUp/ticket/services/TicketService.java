@@ -1,5 +1,6 @@
 package com.example.snapUp.ticket.services;
 
+import com.example.snapUp.common.constant.RedisConstants;
 import com.example.snapUp.common.services.LockService;
 import com.example.snapUp.common.services.LuaScriptService;
 import com.example.snapUp.ticket.enums.OrderStatus;
@@ -57,11 +58,16 @@ public class TicketService {
         ticket.setStock(DEFAULT_RESET_STOCK);
         ticketRepository.save(ticket);
 
-        resetRedisStock(TicketConstants.TICKET_STOCK_KEY_PREFIX + ticketType, DEFAULT_RESET_STOCK);
+        resetRedisStock(RedisConstants.TICKET_STOCK_KEY_PREFIX + ticketType, DEFAULT_RESET_STOCK);
 
         logger.info("Tickets reset successfully");
     }
 
+    /**
+     *
+     * @param redisKey
+     * @param stock
+     */
     private void resetRedisStock(String redisKey, int stock) {
         redisTemplate.execute((RedisCallback<Object>) connection -> {
             connection.flushAll();
@@ -70,13 +76,21 @@ public class TicketService {
         redisTemplate.opsForValue().set(redisKey, String.valueOf(stock));
     }
 
+    /**
+     * Purchase Ticket
+     * @param ticketType Ticket Type (ex: A,B....)
+     * @param customerId Customer Id
+     * @param quantity Quantity
+     * @return TicketPurchaseResult
+     * @throws IOException
+     */
     public TicketPurchaseResult purchaseTicket(String ticketType, String customerId, int quantity)
             throws IOException {
 
-        String redisKeyStock = TicketConstants.TICKET_STOCK_KEY_PREFIX + ticketType;
+        String redisKeyStock = RedisConstants.TICKET_STOCK_KEY_PREFIX + ticketType;
 
         return lockService.executeWithLock(
-                TicketConstants.TICKET_LOCK_KEY_PREFIX + ticketType,
+                RedisConstants.TICKET_LOCK_KEY_PREFIX + ticketType,
                 TicketConstants.MAX_LOCK_RETRIES,
                 TicketConstants.LOCK_RETRY_DELAY_MS, () -> {
                     initRedisIfAbsent(redisKeyStock, ticketType);
@@ -100,7 +114,7 @@ public class TicketService {
 
     private void createOrder(String ticketType, String customerId) {
         String orderId = UUID.randomUUID().toString();
-        Orders order = new Orders(orderId, ticketType, customerId, OrderStatus.CANCELLED.getCode());
+        Orders order = new Orders(orderId, ticketType, customerId, OrderStatus.PENDING.getCode());
         ordersRepository.save(order);
         orderService.setOrderDelay(orderId);
     }
@@ -119,7 +133,7 @@ public class TicketService {
 
     private int exePurchaseTicketLua(String redisKeyStock, int purchaseQuantity) throws IOException {
         List<String> keys = List.of(redisKeyStock);
-        List<String> argv = List.of(String.valueOf(purchaseQuantity), String.valueOf(TicketConstants.INIT_REDIS_STOCK_IF_NOT_EXT));
+        List<String> argv = List.of(String.valueOf(purchaseQuantity), String.valueOf(RedisConstants.INIT_REDIS_STOCK_IF_NOT_EXT));
         return luaScriptService.exeLua(keys, argv, DECR_TICKET_LUA_PATH);
     }
 }

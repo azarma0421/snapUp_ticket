@@ -12,7 +12,7 @@ public interface OrdersRepository extends JpaRepository<Orders, String> {
 
     @Transactional
     @Query(value = "select * from orders where status = 0 and order_Id=:id", nativeQuery = true)
-    Optional<Orders> findUnpaidOrderByTicketId(@Param("id") String id);
+    Optional<Orders> findUnpaidOrderByOrderId(@Param("id") String id);
 
     @Transactional
     @Query(value = "select * from orders where order_Id=:id", nativeQuery = true)
